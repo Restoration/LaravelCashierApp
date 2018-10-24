@@ -89,3 +89,87 @@ $ vim .env
 STRIPE_KEY= <Your stripe key>
 STRIPE_SECRET= <Your seacret key>
 `
+
+
+## Single payment system
+
+```
+$ php artisan make:controller HomeController
+```
+
+```
+Route::get('/', 'HomeController@index')->name('home');
+Route::post('/charge', 'HomeController@charge');
+```
+
+
+```
+$ vim app/Http/Controllers/HomeController.php
+```
+```PHP
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Stripe\Stripe;
+use Stripe\Customer;
+use Stripe\Charge;
+
+class HomeController extends Controller
+{
+    //
+    public function index()
+    {
+        return view('welcome');
+    }
+    // Single payment
+    public function charge(Request $request)
+    {
+        try {
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            $customer = Customer::create(array(
+                'email' => $request->stripeEmail,
+                'source' => $request->stripeToken
+            ));
+
+            $charge = Charge::create(array(
+                'customer' => $customer->id,
+                'amount' => 1000,
+                'currency' => 'jpy'
+            ));
+
+            return back();
+        } catch (\Exception $ex) {
+            return $ex->getMessage();
+        }
+    }
+}
+```
+
+```
+$ vim  resouces/views/welcome.blade.php
+```
+
+```PHP
+<div class="content">
+	<div class="title m-b-md">
+        	Laravel Cashier App
+       	</div>
+        <form action="{{ asset('charge') }}" method="POST">
+        	{{ csrf_field() }}
+                <script
+                	src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+                        data-key="{{ env('STRIPE_KEY') }}"
+                        data-amount="1000"
+                        data-name="Stripe Demo"
+                        data-label="Payment"
+                        data-description="Online course about integrating Stripe"
+                        data-image="https://stripe.com/img/documentation/checkout/marketplace.png"
+                        data-locale="auto"
+                        data-currency="JPY">
+                </script>
+        </form>
+ </div>
+```
